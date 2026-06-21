@@ -1,14 +1,12 @@
 const express = require('express');
 const { MongoClient } = require('mongodb');
 const cron = require('node-cron');
-const sgMail = require('@sendgrid/mail');
 const twilio = require('twilio');
 require('dotenv').config();
 
 const app = express();
 app.use(express.json());
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 const twilioClient = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
 
 async function connectDB() {
@@ -33,31 +31,16 @@ app.get('/', (req, res) => {
 
 async function sendAlerts(user) {
   for (const contact of user.contacts) {
-    // Send SMS if phone exists
-    if (contact.phone) {
-      try {
-        await twilioClient.messages.create({
-          body: `Alert: ${user.user_name} has missed their 48-hour safety check-in. Please try to contact them immediately.`,
-          from: process.env.TWILIO_PHONE_NUMBER,
-          to: contact.phone
-        });
-      } catch (err) {
-        console.error(`Failed to SMS ${contact.name}:`, err.message);
-      }
-    }
+    if (!contact.phone) continue;
 
-    // Send Email if email exists
-    if (contact.email) {
-      try {
-        await sgMail.send({
-          to: contact.email,
-          from: process.env.SENDGRID_FROM_EMAIL,
-          subject: `Safety Alert: ${user.user_name}`,
-          text: `${user.user_name} has missed their 48-hour safety check-in. Please try to contact them immediately.`
-        });
-      } catch (err) {
-        console.error(`Failed to email ${contact.name}:`, err.message);
-      }
+    try {
+      await twilioClient.messages.create({
+        body: `Alert: ${user.user_name} has missed their 48-hour safety check-in. Please try to contact them immediately.`,
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: contact.phone
+      });
+    } catch (err) {
+      console.error(`Failed to SMS ${contact.name}:`, err.message);
     }
   }
 }

@@ -13,9 +13,9 @@ router.post('/api/v1/contacts', async (req, res) => {
     }
 
     for (const contact of contacts) {
-      if (!contact.name || (!contact.phone && !contact.email)) {
+      if (!contact.name || !contact.phone) {
         return res.status(400).json({
-          error: "Each contact must have a name and at least a phone or email."
+          error: "Each contact must have a name and phone number."
         });
       }
     }
