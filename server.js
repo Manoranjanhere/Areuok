@@ -1,3 +1,5 @@
+process.env.TZ = process.env.TZ || 'Asia/Kolkata';
+
 const express = require('express');
 const { MongoClient } = require('mongodb');
 const cron = require('node-cron');
@@ -66,7 +68,7 @@ function startCronJob(db) {
       );
       console.log(`Alert sent for user: ${user.user_name}`);
     }
-  });
+  }, { timezone: 'Asia/Kolkata' });
 }
 
 const PORT = process.env.PORT || 3000;

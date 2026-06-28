@@ -1,4 +1,5 @@
 const express = require('express');
+const { toISTISO } = require('../utils/time');
 const router = express.Router();
 
 router.post('/api/v1/checkin', async (req, res) => {
@@ -27,7 +28,7 @@ router.post('/api/v1/checkin', async (req, res) => {
 
     return res.status(200).json({
       message: "Check-in successful. You're marked as SAFE.",
-      last_checkin_at: now
+      last_checkin_at: toISTISO(now),
     });
   } catch (err) {
     console.error("Error in /api/v1/checkin:", err);
