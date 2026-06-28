@@ -29,10 +29,14 @@ const options = {
           properties: {
             deviceId: {
               type: 'string',
-              example: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d',
+              example: 'c2b3d88b-f45b-4a5c-9c88-75176b6b77e8',
               description: 'Unique device/installation ID from the mobile app',
             },
-            user_name: { type: 'string', example: 'Ramesh' },
+            user_name: { type: 'string', example: 'User' },
+            checkinFrequency: { type: 'string', example: 'Every 24 hours' },
+            checkinFrequencyMinutes: { type: 'integer', example: 1440 },
+            gracePeriod: { type: 'string', example: '30 minutes' },
+            gracePeriodMinutes: { type: 'integer', example: 30 },
             contacts: {
               type: 'array',
               items: { $ref: '#/components/schemas/Contact' },
@@ -43,7 +47,11 @@ const options = {
           type: 'object',
           properties: {
             message: { type: 'string', example: 'User and contacts created successfully.' },
-            deviceId: { type: 'string', example: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d' },
+            deviceId: { type: 'string', example: 'c2b3d88b-f45b-4a5c-9c88-75176b6b77e8' },
+            checkinFrequency: { type: 'string', example: 'Every 24 hours' },
+            checkinFrequencyMinutes: { type: 'integer', example: 1440 },
+            gracePeriod: { type: 'string', example: '30 minutes' },
+            gracePeriodMinutes: { type: 'integer', example: 30 },
           },
         },
         CheckinRequest: {
@@ -77,7 +85,7 @@ const options = {
           tags: ['Contacts'],
           summary: 'Save or update emergency contacts',
           description:
-            'Creates a new user on first call, or updates name and contacts for an existing deviceId.',
+            'Creates a new user on first call, or updates settings and contacts for an existing deviceId. Cron alerts fire after checkinFrequencyMinutes + gracePeriodMinutes pass without a check-in.',
           requestBody: {
             required: true,
             content: {

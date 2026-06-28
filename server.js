@@ -37,30 +37,63 @@ app.get('/', (req, res) => {
 });
 
 async function sendAlerts(user) {
+  const frequencyLabel = user.checkinFrequency || `${user.checkinFrequencyMinutes || 1440} minutes`;
+  const graceLabel = user.gracePeriod || `${user.gracePeriodMinutes || 0} minutes`;
+  const message =
+    `Alert: ${user.user_name} has missed their ${frequencyLabel} safety check-in ` +
+    `(grace period: ${graceLabel}). Please try to contact them immediately.`;
+
   for (const contact of user.contacts) {
     if (!contact.phone) continue;
 
-    try {
-      await twilioClient.messages.create({
-        body: `Alert: ${user.user_name} has missed their 48-hour safety check-in. Please try to contact them immediately.`,
-        from: process.env.TWILIO_PHONE_NUMBER,
-        to: contact.phone
-      });
-    } catch (err) {
-      console.error(`Failed to SMS ${contact.name}:`, err.message);
+    if (process.env.TWILIO_PHONE_NUMBER) {
+      try {
+        await twilioClient.messages.create({
+          body: message,
+          from: process.env.TWILIO_PHONE_NUMBER,
+          to: contact.phone,
+        });
+        console.log(`SMS alert sent to ${contact.name}`);
+      } catch (err) {
+        console.error(`Failed to SMS ${contact.name}:`, err.message);
+      }
+    }
+
+    if (process.env.TWILIO_WHATSAPP_NUMBER) {
+      try {
+        await twilioClient.messages.create({
+          body: message,
+          from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`,
+          to: `whatsapp:${contact.phone}`,
+        });
+        console.log(`WhatsApp alert sent to ${contact.name}`);
+      } catch (err) {
+        console.error(`Failed to WhatsApp ${contact.name}:`, err.message);
+      }
     }
   }
+}
+
+function isCheckinExpired(user, now = Date.now()) {
+  if (!user.last_checkin_at) return false;
+
+  const frequencyMinutes = user.checkinFrequencyMinutes ?? 2880;
+  const graceMinutes = user.gracePeriodMinutes ?? 0;
+  const allowedMs = (frequencyMinutes + graceMinutes) * 60 * 1000;
+  const elapsedMs = now - new Date(user.last_checkin_at).getTime();
+
+  return elapsedMs > allowedMs;
 }
 
 function startCronJob(db) {
   cron.schedule('*/10 * * * *', async () => {
     console.log("Running check-in expiry check...");
-    const expiredUsers = await db.collection('users').find({
-      last_checkin_at: { $lt: new Date(Date.now() - 48 * 60 * 60 * 1000) },
-      status: "SAFE"
-    }).toArray();
+    const safeUsers = await db.collection('users').find({ status: "SAFE" }).toArray();
+    const now = Date.now();
 
-    for (const user of expiredUsers) {
+    for (const user of safeUsers) {
+      if (!isCheckinExpired(user, now)) continue;
+
       await sendAlerts(user);
       await db.collection('users').updateOne(
         { _id: user._id },
